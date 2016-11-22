@@ -143,18 +143,6 @@ class TestHasClaim(BaseTest):
 
     """Test hasClaim()."""
 
-    def setUp(self):
-        super(TestHasClaim, self).setUp()
-
-        alias_patcher = mock.patch(
-            'wikidataStuff.WikidataStuff.pywikibot.ItemPage.editAliases')
-        label_patcher = mock.patch(
-            'wikidataStuff.WikidataStuff.pywikibot.ItemPage.editLabels')
-        self.mock_edit_alias = alias_patcher.start()
-        self.mock_edit_label = label_patcher.start()
-        self.addCleanup(alias_patcher.stop)
-        self.addCleanup(label_patcher.stop)
-
     def test_has_claim_prop_not_present(self):
         prop = 'P0'
         itis = 'A string'
@@ -200,6 +188,7 @@ class TestHasClaim(BaseTest):
 
     # this test should fail later
     # then check that it gets the qualified one only (or all of them)
+    # but also needs to deal with Statement.force (append qualifier to sourced items)
     def test_has_claim_match_independent_of_qualifier(self):
         prop = 'P174'
         itis = 'A string entry with a qualifier'
@@ -207,3 +196,87 @@ class TestHasClaim(BaseTest):
         self.assertEquals(
             self.wd_stuff.hasClaim(prop, itis, self.wd_page).toJSON()['id'],
             expected)
+
+
+class TestHasQualifier(BaseTest):
+
+    """Test hasQualifier()."""
+
+    # test for test_qual = None
+
+    def test_has_qualifier_no_qualifier(self):
+        claim = self.wd_page.claims['P664'][0]
+        test_qual = WD.WikidataStuff.Qualifier('P174', 'qualifier')
+        self.assertFalse(self.wd_stuff.hasQualifier(test_qual, claim))
+
+    def test_has_qualifier_different_qualifier_prop(self):
+        claim = self.wd_page.claims['P664'][1]
+        test_qual = WD.WikidataStuff.Qualifier('P0', 'qualifier')
+        self.assertFalse(self.wd_stuff.hasQualifier(test_qual, claim))
+
+    def test_has_qualifier_different_qualifier_value(self):
+        claim = self.wd_page.claims['P664'][1]
+        test_qual = WD.WikidataStuff.Qualifier('P174', 'Another qualifier')
+        self.assertFalse(self.wd_stuff.hasQualifier(test_qual, claim))
+
+    def test_has_qualifier_same_qualifier(self):
+        claim = self.wd_page.claims['P664'][1]
+        test_qual = WD.WikidataStuff.Qualifier('P174', 'qualifier')
+        self.assertTrue(self.wd_stuff.hasQualifier(test_qual, claim))
+
+    def test_has_qualifier_multiple_qualifiers_different_prop(self):
+        claim = self.wd_page.claims['P174'][4]
+        expect_qual_1 = WD.WikidataStuff.Qualifier('P174', 'A qualifier')
+        expect_qual_2 = WD.WikidataStuff.Qualifier('P664', 'Another qualifier')
+        unexpected_qual = WD.WikidataStuff.Qualifier('P174', 'Not a qualifier')
+        self.assertTrue(self.wd_stuff.hasQualifier(expect_qual_1, claim))
+        self.assertTrue(self.wd_stuff.hasQualifier(expect_qual_2, claim))
+        self.assertFalse(self.wd_stuff.hasQualifier(unexpected_qual, claim))
+
+    def test_has_qualifier_multiple_qualifiers_same_prop(self):
+        claim = self.wd_page.claims['P174'][5]
+        expect_qual_1 = WD.WikidataStuff.Qualifier('P174', 'A qualifier')
+        expect_qual_2 = WD.WikidataStuff.Qualifier('P174', 'Another qualifier')
+        unexpected_qual = WD.WikidataStuff.Qualifier('P174', 'Not a qualifier')
+        self.assertTrue(self.wd_stuff.hasQualifier(expect_qual_1, claim))
+        self.assertTrue(self.wd_stuff.hasQualifier(expect_qual_2, claim))
+        self.assertFalse(self.wd_stuff.hasQualifier(unexpected_qual, claim))
+
+
+class TestAllQualifiers(BaseTest):
+
+    """Test hasAllQualifiers()."""
+
+    def setUp(self):
+        super(TestAllQualifiers, self).setUp()
+        self.claim = self.wd_page.claims['P174'][4]
+        self.quals = []
+
+    def test_has_all_qualifiers_none(self):
+        with self.assertRaises(TypeError):
+            self.assertFalse(self.wd_stuff.hasAllQualifiers(None, self.claim))
+
+    def test_has_all_qualifiers_empty(self):
+        self.assertTrue(self.wd_stuff.hasAllQualifiers(self.quals, self.claim))
+
+    def test_has_all_qualifiers_has_all(self):
+        self.quals.append(
+            WD.WikidataStuff.Qualifier('P174', 'A qualifier'))
+        self.quals.append(
+            WD.WikidataStuff.Qualifier('P664', 'Another qualifier'))
+        self.assertTrue(self.wd_stuff.hasAllQualifiers(self.quals, self.claim))
+
+    def test_has_all_qualifiers_has_all_but_one(self):
+        self.quals.append(
+            WD.WikidataStuff.Qualifier('P174', 'A qualifier'))
+        self.quals.append(
+            WD.WikidataStuff.Qualifier('P664', 'Another qualifier'))
+        self.quals.append(
+            WD.WikidataStuff.Qualifier('P174', 'Not a qualifier'))
+        self.assertFalse(
+            self.wd_stuff.hasAllQualifiers(self.quals, self.claim))
+
+    def test_has_all_qualifiers_has_all_plus_one(self):
+        self.quals.append(
+            WD.WikidataStuff.Qualifier('P174', 'A qualifier'))
+        self.assertTrue(self.wd_stuff.hasAllQualifiers(self.quals, self.claim))

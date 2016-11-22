@@ -323,7 +323,7 @@ class WikidataStuff(object):
         Check if qualifier is already present.
 
         @param qual: Qualifier
-        @param claim: Claim
+        @param claim: pywikibot.Claim
         """
         if claim.qualifiers:
             if qual.prop in claim.qualifiers.keys():

@@ -1,7 +1,7 @@
 {
     "entities": {
         "Q27399": {
-            "lastrevid": 100085, 
+            "lastrevid": 100534, 
             "pageid": 41311, 
             "sitelinks": {}, 
             "title": "Q27399", 
@@ -15,7 +15,7 @@
                     "language": "sv"
                 }
             }, 
-            "modified": "2016-11-21T22:15:27Z", 
+            "modified": "2016-11-22T10:59:13Z", 
             "descriptions": {
                 "en": {
                     "value": "en_description", 
@@ -239,6 +239,91 @@
                         }, 
                         "id": "Q27399$fd26eeb2-46c6-55e0-a770-08e0ad21e138", 
                         "rank": "normal"
+                    }, 
+                    {
+                        "mainsnak": {
+                            "datatype": "string", 
+                            "datavalue": {
+                                "type": "string", 
+                                "value": "A string entry with many qualifiers"
+                            }, 
+                            "property": "P174", 
+                            "snaktype": "value"
+                        }, 
+                        "rank": "normal", 
+                        "id": "Q27399$b48a2630-4fbb-932d-4f01-eefcf1e73f59", 
+                        "qualifiers-order": [
+                            "P174", 
+                            "P664"
+                        ], 
+                        "type": "statement", 
+                        "qualifiers": {
+                            "P664": [
+                                {
+                                    "datatype": "string", 
+                                    "datavalue": {
+                                        "type": "string", 
+                                        "value": "Another qualifier"
+                                    }, 
+                                    "property": "P664", 
+                                    "hash": "fbfe2b5fbe1bbb88ec430324551e80bcf5410ecd", 
+                                    "snaktype": "value"
+                                }
+                            ], 
+                            "P174": [
+                                {
+                                    "datatype": "string", 
+                                    "datavalue": {
+                                        "type": "string", 
+                                        "value": "A qualifier"
+                                    }, 
+                                    "property": "P174", 
+                                    "hash": "45d775f6987454f8631b9642f3171ad20fb80879", 
+                                    "snaktype": "value"
+                                }
+                            ]
+                        }
+                    }, 
+                    {
+                        "mainsnak": {
+                            "datatype": "string", 
+                            "datavalue": {
+                                "type": "string", 
+                                "value": "A string entry with many qualifiers 2"
+                            }, 
+                            "property": "P174", 
+                            "snaktype": "value"
+                        }, 
+                        "rank": "normal", 
+                        "id": "Q27399$0bc9927a-4bb2-145a-c1f9-059897f270bf", 
+                        "qualifiers-order": [
+                            "P174"
+                        ], 
+                        "type": "statement", 
+                        "qualifiers": {
+                            "P174": [
+                                {
+                                    "datatype": "string", 
+                                    "datavalue": {
+                                        "type": "string", 
+                                        "value": "A qualifier"
+                                    }, 
+                                    "property": "P174", 
+                                    "hash": "45d775f6987454f8631b9642f3171ad20fb80879", 
+                                    "snaktype": "value"
+                                }, 
+                                {
+                                    "datatype": "string", 
+                                    "datavalue": {
+                                        "type": "string", 
+                                        "value": "Another qualifier"
+                                    }, 
+                                    "property": "P174", 
+                                    "hash": "6b8b796a49afb2dd42e219352679d386af8390b1", 
+                                    "snaktype": "value"
+                                }
+                            ]
+                        }
                     }
                 ], 
                 "P84": [
