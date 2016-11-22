@@ -310,8 +310,13 @@ class WikidataStuff(object):
         """
         Check if all qualifiers are already present.
 
-        @param quals: list of Qualifier
-        @param claim: Claim
+        Note that this checks if the supplied qualifiers are in the provided
+        claim. But not if the provided claim has any other qualifiers.
+
+        @param quals: Qualifiers to look for
+        @type quals: list of Qualifier
+        @param claim: Claim to check
+        @type claim: pywikibot.Claim
         """
         for qual in quals:
             if not self.hasQualifier(qual, claim):
@@ -322,8 +327,10 @@ class WikidataStuff(object):
         """
         Check if qualifier is already present.
 
-        @param qual: Qualifier
-        @param claim: pywikibot.Claim
+        @param qual: Qualifier to look for
+        @type qual: Qualifier
+        @param claim: Claim to check
+        @type claim: pywikibot.Claim
         """
         if claim.qualifiers:
             if qual.prop in claim.qualifiers.keys():
@@ -409,7 +416,6 @@ class WikidataStuff(object):
         Add a claim or source it if already existing.
 
         Known issues:
-        * Only allows one qualifier to be added
         * Will source a claim with other qualifiers
 
         @param prop: property id, with "P" prefix

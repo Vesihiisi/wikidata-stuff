@@ -45,6 +45,12 @@ class BaseTest(unittest.TestCase):
         self.wd_page.get()
         self.wd_stuff = WD.WikidataStuff(self.repo)
 
+        # silence output
+        output_patcher = mock.patch(
+            'wikidataStuff.WikidataStuff.pywikibot.output')
+        self.mock_output = output_patcher.start()
+        self.addCleanup(output_patcher.stop)
+
 
 class TestAddLabelOrAlias(BaseTest):
 
@@ -180,15 +186,15 @@ class TestHasClaim(BaseTest):
     def test_has_claim_match_WbTime_type(self):
         prop = 'P74'
         itis = pywikibot.WbTime(year=2016, month=11, day=22, site=self.repo)
+        function = 'wikidataStuff.WikidataStuff.WikidataStuff.compareWbTimeClaim'
 
-        with mock.patch('wikidataStuff.WikidataStuff.WikidataStuff.compareWbTimeClaim', autospec=True) as mock_compare_WbTime:
+        with mock.patch(function, autospec=True) as mock_compare_WbTime:
             self.wd_stuff.hasClaim(prop, itis, self.wd_page)
             mock_compare_WbTime.assert_called_once_with(
                 self.wd_stuff, itis, itis)
 
     # this test should fail later
     # then check that it gets the qualified one only (or all of them)
-    # but also needs to deal with Statement.force (append qualifier to sourced items)
     def test_has_claim_match_independent_of_qualifier(self):
         prop = 'P174'
         itis = 'A string entry with a qualifier'
@@ -280,3 +286,185 @@ class TestAllQualifiers(BaseTest):
         self.quals.append(
             WD.WikidataStuff.Qualifier('P174', 'A qualifier'))
         self.assertTrue(self.wd_stuff.hasAllQualifiers(self.quals, self.claim))
+
+
+class TestAddNewClaim(BaseTest):
+
+    """Test addNewClaim()."""
+
+    def setUp(self):
+        super(TestAddNewClaim, self).setUp()
+
+        # mock all writing calls
+        add_qualifier_patcher = mock.patch(
+            'wikidataStuff.WikidataStuff.WikidataStuff.addQualifier')
+        add_reference_patcher = mock.patch(
+            'wikidataStuff.WikidataStuff.WikidataStuff.addReference')
+        add_claim_patcher = mock.patch(
+            'wikidataStuff.WikidataStuff.pywikibot.ItemPage.addClaim')
+        self.mock_add_qualifier = add_qualifier_patcher.start()
+        self.mock_add_reference = add_reference_patcher.start()
+        self.mock_add_claim = add_claim_patcher.start()
+        self.addCleanup(add_qualifier_patcher.stop)
+        self.addCleanup(add_reference_patcher.stop)
+        self.addCleanup(add_claim_patcher.stop)
+
+        # defaults
+        self.ref = None
+        self.prop = 'P509'  # an unused property of type string
+        self.value = 'A statement'
+        self.quals = [
+            WD.WikidataStuff.Qualifier('P174', 'A qualifier'),
+            WD.WikidataStuff.Qualifier('P664', 'Another qualifier')
+        ]
+
+    def test_add_new_claim_new_property(self):
+        statement = WD.WikidataStuff.Statement(self.value)
+        self.wd_stuff.addNewClaim(self.prop, statement, self.wd_page, self.ref)
+
+        self.mock_add_claim.assert_called_once()
+        self.mock_add_qualifier.assert_not_called()
+        self.mock_add_reference.assert_called_once()
+
+    def test_add_new_claim_old_property_new_value(self):
+        self.prop = 'P174'
+        statement = WD.WikidataStuff.Statement(self.value)
+        self.wd_stuff.addNewClaim(self.prop, statement, self.wd_page, self.ref)
+
+        self.mock_add_claim.assert_called_once()
+        self.mock_add_qualifier.assert_not_called()
+        self.mock_add_reference.assert_called_once()
+
+    def test_add_new_claim_old_property_old_value(self):
+        self.prop = 'P174'  # an unused property of type string
+        self.value = 'A string'
+        statement = WD.WikidataStuff.Statement(self.value)
+        expected_claim = 'Q27399$3f62d521-4efe-e8de-8f2d-0d8a10e024cf'
+        self.wd_stuff.addNewClaim(self.prop, statement, self.wd_page, self.ref)
+
+        self.mock_add_claim.assert_not_called()
+        self.mock_add_qualifier.assert_not_called()
+        self.mock_add_reference.assert_called_once()
+
+        # ensure the right claim was sourced
+        self.assertEquals(
+            self.mock_add_reference.call_args[0][1].toJSON()['id'],
+            expected_claim)
+
+    def test_add_new_claim_new_property_with_quals(self):
+        statement = WD.WikidataStuff.Statement(self.value)
+        statement.addQualifier(self.quals[0]).addQualifier(self.quals[1])
+        self.wd_stuff.addNewClaim(self.prop, statement, self.wd_page, self.ref)
+
+        self.mock_add_claim.assert_called_once()
+        self.assertEquals(self.mock_add_qualifier.call_count, 2)
+        self.mock_add_reference.assert_called_once()
+
+    def test_add_new_claim_old_property_new_value_with_quals(self):
+        self.prop = 'P174'
+        statement = WD.WikidataStuff.Statement(self.value)
+        statement.addQualifier(self.quals[0]).addQualifier(self.quals[1])
+        self.wd_stuff.addNewClaim(self.prop, statement, self.wd_page, self.ref)
+
+        self.mock_add_claim.assert_called_once()
+        self.assertEquals(self.mock_add_qualifier.call_count, 2)
+        self.mock_add_reference.assert_called_once()
+
+    # should fail once proper comparisons are done
+    def test_add_new_claim_old_property_old_value_without_quals(self):
+        self.prop = 'P174'
+        self.value = 'A string'
+        statement = WD.WikidataStuff.Statement(self.value)
+        statement.addQualifier(self.quals[0]).addQualifier(self.quals[1])
+        expected_claim = 'Q27399$3f62d521-4efe-e8de-8f2d-0d8a10e024cf'
+        self.wd_stuff.addNewClaim(self.prop, statement, self.wd_page, self.ref)
+
+        self.mock_add_claim.assert_not_called()
+        self.assertEquals(self.mock_add_qualifier.call_count, 2)
+        self.mock_add_reference.assert_called_once()
+        self.assertEquals(
+            self.mock_add_reference.call_args[0][1].toJSON()['id'],
+            expected_claim)
+
+    # should fail once proper comparisons are done
+    def test_add_new_claim_old_property_old_value_with_different_quals(self):
+        self.prop = 'P174'
+        self.value = 'A string entry with a qualifier'
+        statement = WD.WikidataStuff.Statement(self.value)
+        statement.addQualifier(self.quals[0]).addQualifier(self.quals[1])
+        expected_claim = 'Q27399$50b7cccb-4e9d-6f5d-d9c9-6b85d771c2d4'
+        self.wd_stuff.addNewClaim(self.prop, statement, self.wd_page, self.ref)
+
+        self.mock_add_claim.assert_not_called()
+        self.assertEquals(self.mock_add_qualifier.call_count, 2)
+        self.mock_add_reference.assert_called_once()
+        self.assertEquals(
+            self.mock_add_reference.call_args[0][1].toJSON()['id'],
+            expected_claim)
+
+    # should change once proper comparisons are done
+    def test_add_new_claim_old_property_old_value_with_same_quals(self):
+        self.prop = 'P174'
+        self.value = 'A string entry with many qualifiers'
+        statement = WD.WikidataStuff.Statement(self.value)
+        statement.addQualifier(self.quals[0]).addQualifier(self.quals[1])
+        expected_claim = 'Q27399$b48a2630-4fbb-932d-4f01-eefcf1e73f59'
+        self.wd_stuff.addNewClaim(self.prop, statement, self.wd_page, self.ref)
+
+        self.mock_add_claim.assert_not_called()
+        self.assertEquals(self.mock_add_qualifier.call_count, 2)
+        self.mock_add_reference.assert_called_once()
+        self.assertEquals(
+            self.mock_add_reference.call_args[0][1].toJSON()['id'],
+            expected_claim)
+
+    # test_add_new_claim_old_property_old_value_without_quals_and_ref
+    # test_add_new_claim_old_property_old_value_with_different_quals_and_ref
+    # test_add_new_claim_old_property_old_value_with_same_quals_and_ref
+    # statements with quals and target with source
+    # statement.force
+
+    @unittest.expectedFailure  # issue #21 - sourcing wrong claim
+    def test_add_new_modify_source_correct_qualified_claim(self):
+        self.prop = 'P664'
+        self.value = 'Duplicate_string'
+        statement = WD.WikidataStuff.Statement(self.value)
+        statement.addQualifier(
+            WD.WikidataStuff.Qualifier('P174', 'qualifier'))
+        expected_claim = 'Q27399$a9b83de1-49d7-d033-939d-f430a232ffd0'
+        self.wd_stuff.addNewClaim(self.prop, statement, self.wd_page, self.ref)
+
+        self.mock_add_claim.assert_not_called()
+        self.mock_add_claim.mock_add_qualifier()
+        self.mock_add_reference.assert_called_once()
+        self.assertEquals(
+            self.mock_add_reference.call_args[0][1].toJSON()['id'],
+            expected_claim)
+
+    @unittest.expectedFailure  # issue #21 - adding new claim
+    def test_add_new_modify_source_correct_qualified_claim_with_ref(self):
+        self.prop = 'P664'
+        self.value = 'Duplicate_string_with_ref'
+        statement = WD.WikidataStuff.Statement(self.value)
+        statement.addQualifier(
+            WD.WikidataStuff.Qualifier('P174', 'qualifier'))
+        expected_claim = 'Q27399$e63f47a3-45ea-e2fc-1363-8f6062205084'
+        self.wd_stuff.addNewClaim(self.prop, statement, self.wd_page, self.ref)
+
+        self.mock_add_claim.assert_not_called()
+        self.mock_add_claim.mock_add_qualifier()
+        self.mock_add_reference.assert_called_once()
+        self.assertEquals(
+            self.mock_add_reference.call_args[0][1].toJSON()['id'],
+            expected_claim)
+
+    def test_add_new_call_special_has_claim(self):
+        value = 'somevalue'
+        statement = WD.WikidataStuff.Statement(value, special=True)
+        function = 'wikidataStuff.WikidataStuff.WikidataStuff.hasSpecialClaim'
+
+        with mock.patch(function, autospec=True) as mock_has_special_claim:
+            self.wd_stuff.addNewClaim(
+                self.prop, statement, self.wd_page, self.ref)
+            mock_has_special_claim.assert_called_once_with(
+                self.wd_stuff, self.prop, value, self.wd_page)
