@@ -511,7 +511,7 @@ class TestAddNewClaim(BaseTest):
             self.wd_stuff.addNewClaim(
                 self.prop, statement, self.wd_page, self.ref)
         self.assertEqual(str(e.exception),
-                          'Problem adding P84 claim to [[test:-1]]: '
+                          'Problem adding P84 claim to [[wikidata:test:-1]]: '
                           'Multiple identical claims')
 
 
