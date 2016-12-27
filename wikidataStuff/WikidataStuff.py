@@ -277,6 +277,9 @@ class WikidataStuff(object):
         """
         Add a reference if not already present.
 
+        If a source contains the claims in WD.Reference AND additional claims,
+        it will not be sourced.
+
         @param item: the item on which all of this happens
         @param claim: the pywikibot.Claim to be sourced
         @param ref: the WD.Reference to add
@@ -364,6 +367,9 @@ class WikidataStuff(object):
         @param qual: Qualifier to check
         @param summary: summary to append to auto-generated edit summary
         """
+        if not qual:
+            raise pywikibot.Error(
+                'Cannot call addQualifier() without a qualifier.')
         # check if already present
         if self.hasQualifier(qual, claim):
             return False
